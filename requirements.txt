@@ -1,0 +1,9 @@
+gradio
+torch
+torchvision
+transformers
+accelerate
+bitsandbytes
+pillow
+sentencepiece
+protobuf
