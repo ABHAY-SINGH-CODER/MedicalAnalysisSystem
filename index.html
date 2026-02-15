@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #212121;
+            color: #ececec;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, #10a37f 0%, #0d8c6f 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 2px 8px rgba(16, 163, 127, 0.3);
+        }
+
+        .app-title {
+            font-size: 14px;
+            color: #8e8ea0;
+            font-weight: 400;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 768px;
+            padding: 0 24px;
+        }
+
+        .input-container {
+            background: #2f2f2f;
+            border-radius: 24px;
+            padding: 16px 20px;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: box-shadow 0.2s;
+        }
+
+        .input-container:focus-within {
+            box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.4);
+        }
+
+        .upload-section {
+            display: none;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3f3f3f;
+        }
+
+        .upload-section.active {
+            display: block;
+        }
+
+        .file-preview {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #3f3f3f;
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .file-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 14px;
+            color: #ececec;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #8e8ea0;
+            margin-top: 2px;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: #8e8ea0;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .remove-file:hover {
+            color: #ececec;
+            background: #4f4f4f;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        .attach-btn {
+            background: none;
+            border: none;
+            color: #8e8ea0;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 20px;
+        }
+
+        .attach-btn:hover {
+            background: #3f3f3f;
+            color: #ececec;
+        }
+
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ececec;
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            min-height: 24px;
+            max-height: 200px;
+            line-height: 24px;
+        }
+
+        textarea::placeholder {
+            color: #8e8ea0;
+        }
+
+        .submit-btn {
+            background: #10a37f;
+            border: none;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: #0d8c6f;
+        }
+
+        .submit-btn:disabled {
+            background: #3f3f3f;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .response-container {
+            margin-top: 40px;
+            display: none;
+        }
+
+        .message {
+            margin-bottom: 32px;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .avatar.user {
+            background: #5436da;
+        }
+
+        .avatar.assistant {
+            background: #10a37f;
+        }
+
+        .message-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ececec;
+        }
+
+        .message-content {
+            margin-left: 44px;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #d1d1d1;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #3f3f3f;
+            border-top-color: #10a37f;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #8e8ea0;
+            font-size: 14px;
+        }
+
+        .error-message {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: #5a2121;
+            border: 1px solid #732626;
+            border-radius: 12px;
+            color: #ffb3b3;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #10a37f;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .section-content {
+            margin-bottom: 20px;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+        }
+
+        .severity-low {
+            background: #0d4f2b;
+            color: #5eead4;
+        }
+
+        .severity-medium {
+            background: #5a3a1a;
+            color: #fbbf24;
+        }
+
+        .severity-high {
+            background: #5a2121;
+            color: #fca5a5;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0 16px;
+            }
+
+            .logo {
+                width: 40px;
+                height: 40px;
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <div class="logo">⚕️</div>
+        <div class="app-title">Medical Analysis</div>
+    </div>
+
+    <div class="main-container">
+        <div class="input-container">
+            <div class="upload-section" id="uploadSection">
+                <div class="file-preview">
+                    <div class="file-icon" id="fileIcon">
+                        <img id="previewImg" src="" alt="">
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name" id="fileName"></div>
+                        <div class="file-size" id="fileSize"></div>
+                    </div>
+                    <button class="remove-file" id="removeFile">✕</button>
+                </div>
+            </div>
+
+            <div class="input-row">
+                <button class="attach-btn" id="attachBtn" title="Attach image">
+                    <span>+</span>
+                </button>
+                <textarea 
+                    id="messageInput" 
+                    placeholder="Describe your symptoms..."
+                    rows="1"
+                ></textarea>
+                <button class="submit-btn" id="submitBtn" disabled>
+                    <span>↑</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing...</div>
+        </div>
+
+        <div class="response-container" id="responseContainer">
+            <div class="message">
+                <div class="message-header">
+                    <div class="avatar user">👤</div>
+                    <div class="message-label">You</div>
+                </div>
+                <div class="message-content" id="userMessage"></div>
+            </div>
+
+            <div class="message">
+                <div class="message-header">
+                    <div class="avatar assistant">⚕️</div>
+                    <div class="message-label">Medical Analysis</div>
+                </div>
+                <div class="message-content">
+                    <div class="section-content">
+                        <div class="section-title">Image Analysis</div>
+                        <div id="imageAnalysis"></div>
+                    </div>
+                    <div class="section-content">
+                        <div class="section-title">Medical Assessment</div>
+                        <div id="medicalAssessment"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*">
+
+    <script>
+        const API_URL = 'https://nonfeverously-confinable-paula.ngrok-free.dev/analyze';
+        
+        const attachBtn = document.getElementById('attachBtn');
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const fileIcon = document.getElementById('fileIcon');
+        const previewImg = document.getElementById('previewImg');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFile = document.getElementById('removeFile');
+        const messageInput = document.getElementById('messageInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const responseContainer = document.getElementById('responseContainer');
+        const userMessage = document.getElementById('userMessage');
+        const imageAnalysis = document.getElementById('imageAnalysis');
+        const medicalAssessment = document.getElementById('medicalAssessment');
+
+        let selectedFile = null;
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            updateSubmitButton();
+        });
+
+        // Attach button
+        attachBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload an image file');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            uploadSection.classList.add('active');
+            updateSubmitButton();
+        }
+
+        removeFile.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            uploadSection.classList.remove('active');
+            updateSubmitButton();
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function updateSubmitButton() {
+            submitBtn.disabled = !selectedFile || !messageInput.value.trim();
+        }
+
+        submitBtn.addEventListener('click', analyze);
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!submitBtn.disabled) analyze();
+            }
+        });
+
+        async function analyze() {
+            if (!selectedFile || !messageInput.value.trim()) return;
+
+            const symptoms = messageInput.value.trim();
+            
+            hideError();
+            responseContainer.style.display = 'none';
+            loading.classList.add('active');
+            submitBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+                formData.append('symptoms', symptoms);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(symptoms, data);
+
+            } catch (err) {
+                showError(`Analysis failed: ${err.message}. Please check your connection.`);
+            } finally {
+                loading.classList.remove('active');
+                submitBtn.disabled = false;
+            }
+        }
+
+        function displayResults(symptoms, data) {
+            userMessage.textContent = symptoms;
+            imageAnalysis.textContent = data.image_analysis || 'No analysis available';
+            
+            let assessment = data.medical_assessment || 'No assessment available';
+            
+            const severityMatch = assessment.match(/Severity:\s*(Low|Medium|High)/i);
+            if (severityMatch) {
+                const severity = severityMatch[1].toLowerCase();
+                const badge = `<span class="severity-badge severity-${severity}">${severityMatch[1]}</span>`;
+                assessment = assessment.replace(severityMatch[0], `Severity:${badge}`);
+            }
+            
+            medicalAssessment.innerHTML = formatText(assessment);
+            responseContainer.style.display = 'block';
+            
+            responseContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function formatText(text) {
+            return text
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>')
+                .replace(/\*\s/g, '<br>• ')
+                .replace(/\* /g, '• ');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+            setTimeout(hideError, 5000);
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('active');
+        }
+    </script>
+</body>
+</html>
