@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedTriage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0b;
+  --surface: #111113;
+  --surface2: #18181b;
+  --surface3: #1f1f23;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.1);
+  --accent: #e8d5b0;
+  --accent2: #c9a96e;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --purple: #c084fc;
+  --text: #f0eeea;
+  --text2: #a09e9a;
+  --text3: #5a5855;
+  --r: 14px;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; font-family:'Geist',sans-serif; background:var(--bg); color:var(--text); font-size:14px; overflow:hidden; }
+
+/* Layout */
+.shell { display:grid; grid-template-columns:240px 1fr; height:100vh; }
+
+/* Sidebar */
+.sidebar {
+  background:var(--surface); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; padding:20px 0; position:relative; overflow:hidden;
+}
+.sidebar::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:100px;
+  background:linear-gradient(to top,var(--surface),transparent); pointer-events:none;
+}
+.sidebar-logo {
+  display:flex; align-items:center; gap:10px;
+  padding:0 20px 22px; border-bottom:1px solid var(--border);
+}
+.logo-gem {
+  width:30px; height:30px;
+  background:linear-gradient(145deg,var(--accent2),#8b6914);
+  border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;
+}
+.logo-name { font-family:'Instrument Serif',serif; font-size:17px; color:var(--text); }
+.logo-badge {
+  font-family:'Geist Mono',monospace; font-size:9px; color:var(--accent2);
+  background:rgba(201,169,110,0.1); border:1px solid rgba(201,169,110,0.2);
+  padding:2px 6px; border-radius:100px; margin-left:auto;
+}
+.sidebar-section { padding:16px 12px 8px; }
+.sidebar-label {
+  font-family:'Geist Mono',monospace; font-size:9px; text-transform:uppercase;
+  letter-spacing:1.2px; color:var(--text3); padding:0 8px; margin-bottom:6px;
+}
+.sidebar-item {
+  display:flex; align-items:center; gap:9px; padding:8px 10px;
+  border-radius:9px; cursor:pointer; color:var(--text2); font-size:13px;
+  transition:all 0.15s; user-select:none;
+}
+.sidebar-item:hover { background:var(--surface2); color:var(--text); }
+.sidebar-item.active { background:var(--surface2); color:var(--text); border:1px solid var(--border2); }
+.si-icon { font-size:14px; width:20px; text-align:center; flex-shrink:0; }
+.si-text { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.si-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.dot-green { background:var(--green); } .dot-amber { background:var(--amber); } .dot-red { background:var(--red); }
+.sidebar-bottom { margin-top:auto; padding:0 12px; position:relative; z-index:1; }
+.new-chat-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  padding:10px; background:linear-gradient(135deg,rgba(201,169,110,0.15),rgba(201,169,110,0.05));
+  border:1px solid rgba(201,169,110,0.25); border-radius:10px;
+  color:var(--accent); font-family:'Geist',sans-serif; font-size:13px; font-weight:500;
+  cursor:pointer; transition:all 0.2s;
+}
+.new-chat-btn:hover {
+  background:linear-gradient(135deg,rgba(201,169,110,0.22),rgba(201,169,110,0.1));
+  border-color:rgba(201,169,110,0.4); box-shadow:0 0 20px rgba(201,169,110,0.08);
+}
+
+/* Main */
+.main { display:flex; flex-direction:column; height:100vh; background:var(--bg); position:relative; }
+.main::before {
+  content:''; position:absolute; inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:0.4; pointer-events:none; z-index:0;
+}
+
+/* Topbar */
+.topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px; border-bottom:1px solid var(--border); position:relative; z-index:2; flex-shrink:0;
+}
+.topbar-left { display:flex; align-items:center; gap:10px; }
+.model-pill {
+  display:flex; align-items:center; gap:7px;
+  background:var(--surface2); border:1px solid var(--border2); border-radius:100px;
+  padding:5px 12px 5px 8px; font-family:'Geist Mono',monospace; font-size:11px; color:var(--text2);
+}
+.model-dot {
+  width:7px; height:7px; border-radius:50%; background:var(--green);
+  box-shadow:0 0 6px var(--green); animation:pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.topbar-right { display:flex; align-items:center; gap:8px; }
+.icon-btn {
+  width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text3); display:flex; align-items:center;
+  justify-content:center; cursor:pointer; font-size:14px; transition:all 0.15s;
+}
+.icon-btn:hover { background:var(--surface2); color:var(--text2); border-color:var(--border2); }
+
+/* Chat area */
+.chat-area {
+  flex:1; overflow-y:auto; padding:32px 0; position:relative; z-index:1; scroll-behavior:smooth;
+}
+.chat-area::-webkit-scrollbar { width:4px; }
+.chat-area::-webkit-scrollbar-thumb { background:var(--surface3); border-radius:4px; }
+
+/* Empty state */
+.empty-state {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; gap:16px; text-align:center; padding:40px;
+  animation:fade-in 0.5s ease both;
+}
+.empty-orb {
+  width:72px; height:72px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,rgba(201,169,110,0.3),rgba(201,169,110,0.05) 60%,transparent);
+  border:1px solid rgba(201,169,110,0.2); display:flex; align-items:center; justify-content:center;
+  font-size:30px; margin-bottom:4px; box-shadow:0 0 40px rgba(201,169,110,0.06);
+}
+.empty-title { font-family:'Instrument Serif',serif; font-size:26px; color:var(--text); font-weight:400; }
+.empty-sub { font-size:13px; color:var(--text3); max-width:300px; line-height:1.65; }
+.suggestion-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:8px; max-width:480px; }
+.chip {
+  background:var(--surface2); border:1px solid var(--border2); border-radius:100px;
+  padding:7px 14px; font-size:12px; color:var(--text2); cursor:pointer;
+  transition:all 0.2s; white-space:nowrap;
+}
+.chip:hover { background:var(--surface3); border-color:rgba(201,169,110,0.3); color:var(--accent); }
+
+/* Messages */
+.messages { display:flex; flex-direction:column; gap:0; max-width:760px; margin:0 auto; padding:0 28px; }
+.msg { display:flex; gap:14px; padding:18px 0; animation:msg-in 0.3s ease both; }
+@keyframes msg-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg + .msg { border-top:1px solid var(--border); }
+.msg-avatar {
+  width:32px; height:32px; border-radius:9px; display:flex; align-items:center;
+  justify-content:center; font-size:15px; flex-shrink:0; margin-top:2px;
+}
+.msg-avatar.user {
+  background:var(--surface3); border:1px solid var(--border2);
+  font-size:11px; color:var(--text2); font-family:'Geist Mono',monospace; font-weight:500;
+}
+.msg-avatar.assistant {
+  background:linear-gradient(145deg,rgba(201,169,110,0.25),rgba(201,169,110,0.08));
+  border:1px solid rgba(201,169,110,0.2);
+}
+.msg-body { flex:1; min-width:0; }
+.msg-name {
+  font-size:12px; font-weight:500; color:var(--text3); margin-bottom:7px;
+  display:flex; align-items:center; gap:8px;
+}
+.msg-name .name-tag { color:var(--text2); }
+.msg-text { font-size:14px; line-height:1.75; color:var(--text2); }
+.msg.user .msg-text { color:var(--text); }
+.msg-image { margin-bottom:10px; border-radius:10px; overflow:hidden; display:inline-block; border:1px solid var(--border2); }
+.msg-image img { max-width:280px; max-height:180px; object-fit:cover; display:block; }
+
+/* Triage result card */
+.triage-card {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:16px; overflow:hidden; margin-top:6px;
+}
+.tc-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-bottom:1px solid var(--border); gap:12px;
+}
+.tc-title { font-family:'Geist Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); }
+.risk-pill {
+  display:flex; align-items:center; gap:7px; border-radius:100px;
+  padding:4px 12px 4px 8px; font-family:'Geist Mono',monospace; font-size:11px; font-weight:500; border:1px solid;
+}
+.risk-pill .rp-score { font-family:'Instrument Serif',serif; font-size:18px; line-height:1; }
+.risk-low    { color:var(--green);  border-color:rgba(74,222,128,0.25);  background:rgba(74,222,128,0.07); }
+.risk-medium { color:var(--amber);  border-color:rgba(251,191,36,0.25);  background:rgba(251,191,36,0.07); }
+.risk-high   { color:var(--red);    border-color:rgba(248,113,113,0.25); background:rgba(248,113,113,0.07); }
+.risk-critical{ color:var(--purple);border-color:rgba(192,132,252,0.25); background:rgba(192,132,252,0.07); }
+.tc-body { padding:16px 18px; display:flex; flex-direction:column; gap:16px; }
+.tc-row { display:flex; flex-direction:column; gap:6px; }
+.tc-label { font-family:'Geist Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); }
+.tc-value { font-size:13px; line-height:1.6; color:var(--text2); }
+.concerns-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.concern-chip { background:var(--surface2); border:1px solid var(--border2); border-radius:8px; padding:4px 10px; font-size:12px; color:var(--text2); }
+.rec-row {
+  display:flex; align-items:flex-start; gap:12px;
+  background:var(--surface2); border-radius:10px; padding:12px 14px; border:1px solid var(--border);
+}
+.rec-emoji { font-size:20px; flex-shrink:0; margin-top:1px; }
+.rec-main { font-size:13px; line-height:1.6; color:var(--text); }
+.rec-follow { font-size:11px; color:var(--text3); font-family:'Geist Mono',monospace; margin-top:3px; }
+.tc-footer {
+  padding:10px 18px; border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
+}
+.tc-meta { font-family:'Geist Mono',monospace; font-size:10px; color:var(--text3); display:flex; align-items:center; gap:14px; }
+.tc-disclaimer { font-size:10px; color:var(--text3); font-style:italic; line-height:1.4; max-width:400px; text-align:right; }
+
+/* Typing */
+.typing-indicator { display:flex; align-items:center; gap:4px; padding:4px 0; }
+.typing-dot { width:5px; height:5px; border-radius:50%; background:var(--text3); animation:typing-bounce 1.2s ease infinite; }
+.typing-dot:nth-child(2){animation-delay:0.2s} .typing-dot:nth-child(3){animation-delay:0.4s}
+@keyframes typing-bounce { 0%,60%,100%{transform:translateY(0);opacity:0.4} 30%{transform:translateY(-4px);opacity:1} }
+
+/* Input area */
+.input-area { flex-shrink:0; padding:16px 28px 20px; position:relative; z-index:2; }
+.input-area::before {
+  content:''; position:absolute; left:0; right:0; bottom:100%;
+  height:60px; background:linear-gradient(to bottom,transparent,var(--bg)); pointer-events:none;
+}
+.input-wrap {
+  max-width:760px; margin:0 auto; background:var(--surface);
+  border:1px solid var(--border2); border-radius:18px;
+  transition:border-color 0.2s,box-shadow 0.2s; overflow:hidden;
+}
+.input-wrap:focus-within {
+  border-color:rgba(201,169,110,0.35); box-shadow:0 0 0 3px rgba(201,169,110,0.06);
+}
+.img-strip { display:none; padding:12px 16px 0; gap:8px; }
+.img-strip.show { display:flex; }
+.img-thumb {
+  position:relative; width:56px; height:56px; border-radius:8px;
+  overflow:hidden; border:1px solid var(--border2); flex-shrink:0;
+}
+.img-thumb img { width:100%; height:100%; object-fit:cover; }
+.img-thumb-remove {
+  position:absolute; top:2px; right:2px; width:18px; height:18px;
+  background:rgba(0,0,0,0.7); border:none; border-radius:50%;
+  color:#fff; font-size:10px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:background 0.15s;
+}
+.img-thumb-remove:hover { background:rgba(248,113,113,0.8); }
+.input-row { display:flex; align-items:flex-end; padding:10px 12px 10px 16px; gap:8px; }
+.input-actions-left { display:flex; align-items:center; gap:4px; padding-bottom:2px; }
+.ia-btn {
+  width:30px; height:30px; border-radius:8px; border:none;
+  background:transparent; color:var(--text3);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:15px; transition:all 0.15s; flex-shrink:0;
+}
+.ia-btn:hover { background:var(--surface2); color:var(--text2); }
+textarea#chatInput {
+  flex:1; background:transparent; border:none; outline:none;
+  color:var(--text); font-family:'Geist',sans-serif; font-size:14px;
+  line-height:1.6; resize:none; min-height:22px; max-height:160px; padding:4px 0;
+}
+textarea#chatInput::placeholder { color:var(--text3); }
+.send-btn {
+  width:34px; height:34px; border-radius:10px; border:none;
+  background:linear-gradient(135deg,var(--accent2),#a07830);
+  color:#0a0a0b; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:15px; transition:all 0.2s; flex-shrink:0;
+}
+.send-btn:hover:not(:disabled) { transform:scale(1.06); box-shadow:0 4px 14px rgba(201,169,110,0.3); }
+.send-btn:disabled { background:var(--surface2); color:var(--text3); cursor:not-allowed; transform:none; box-shadow:none; }
+.input-hint {
+  max-width:760px; margin:6px auto 0; text-align:center;
+  font-size:11px; color:var(--text3); font-family:'Geist Mono',monospace;
+}
+#fileInput { display:none; }
+
+@keyframes fade-in { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+* { scrollbar-width:thin; scrollbar-color:var(--surface3) transparent; }
+
+@media (max-width:640px) {
+  .shell { grid-template-columns:1fr; }
+  .sidebar { display:none; }
+  .input-area { padding:12px 16px 16px; }
+  .messages { padding:0 16px; }
+  .topbar { padding:12px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-gem">⚕</div>
+      <span class="logo-name">MedTriage</span>
+      <span class="logo-badge">PRO</span>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Recent</div>
+      <div class="sidebar-item active">
+        <span class="si-icon">💬</span><span class="si-text">New assessment</span>
+        <span class="si-dot dot-green"></span>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">🩺</span><span class="si-text">Rash on forearm</span>
+        <span class="si-dot dot-amber"></span>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">🩺</span><span class="si-text">Chest discomfort</span>
+        <span class="si-dot dot-red"></span>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">🩺</span><span class="si-text">Seasonal allergies</span>
+        <span class="si-dot dot-green"></span>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">🩺</span><span class="si-text">Persistent cough</span>
+      </div>
+    </div>
+    <div class="sidebar-section" style="margin-top:auto">
+      <div class="sidebar-label">Settings</div>
+      <div class="sidebar-item">
+        <span class="si-icon">⚙️</span><span class="si-text">Preferences</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="si-icon">🔒</span><span class="si-text">Privacy</span>
+      </div>
+    </div>
+    <div class="sidebar-bottom" style="padding-top:16px">
+      <button class="new-chat-btn" id="newChatBtn">+ New Assessment</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="model-pill">
+          <div class="model-dot"></div>gemini-2.5-flash
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="clearBtn" title="Clear">↺</button>
+        <button class="icon-btn" title="Export">↗</button>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-orb">⚕</div>
+        <div class="empty-title">How can I help?</div>
+        <div class="empty-sub">Describe your symptoms or attach a photo for a preliminary triage assessment.</div>
+        <div class="suggestion-chips">
+          <div class="chip" data-fill="I have a fever of 101°F and body aches since yesterday.">🌡 Fever &amp; aches</div>
+          <div class="chip" data-fill="Red itchy rash appeared on my arm this morning.">🔴 Skin rash</div>
+          <div class="chip" data-fill="Severe headache and light sensitivity for 3 hours.">🧠 Headache</div>
+          <div class="chip" data-fill="Chest tightness and mild shortness of breath.">❤️ Chest tightness</div>
+        </div>
+      </div>
+      <div class="messages" id="messagesList" style="display:none"></div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrap" id="inputWrap">
+        <div class="img-strip" id="imgStrip">
+          <div class="img-thumb" id="imgThumb">
+            <img id="thumbImg" src="" alt="">
+            <button class="img-thumb-remove" id="removeImg">✕</button>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-actions-left">
+            <button class="ia-btn" id="attachBtn" title="Attach image">📎</button>
+          </div>
+          <textarea id="chatInput" placeholder="Describe your symptoms…" rows="1"></textarea>
+          <button class="send-btn" id="sendBtn" disabled>↑</button>
+        </div>
+      </div>
+      <div class="input-hint">AI triage · not medical advice · always consult a doctor</div>
+    </div>
+  </main>
+</div>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<script>
+const API_URL = '/api/triage';
+
+const chatArea     = document.getElementById('chatArea');
+const emptyState   = document.getElementById('emptyState');
+const messagesList = document.getElementById('messagesList');
+const chatInput    = document.getElementById('chatInput');
+const sendBtn      = document.getElementById('sendBtn');
+const attachBtn    = document.getElementById('attachBtn');
+const fileInput    = document.getElementById('fileInput');
+const imgStrip     = document.getElementById('imgStrip');
+const thumbImg     = document.getElementById('thumbImg');
+const removeImg    = document.getElementById('removeImg');
+const clearBtn     = document.getElementById('clearBtn');
+const newChatBtn   = document.getElementById('newChatBtn');
+
+let selectedFile = null;
+let isLoading    = false;
+
+// Auto-resize
+chatInput.addEventListener('input', () => {
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+  updateSend();
+});
+
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!sendBtn.disabled) submit(); }
+});
+
+// File
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) return;
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => { thumbImg.src = e.target.result; };
+  reader.readAsDataURL(file);
+  imgStrip.classList.add('show');
+  updateSend();
+}
+
+removeImg.addEventListener('click', () => {
+  selectedFile = null; fileInput.value = ''; thumbImg.src = '';
+  imgStrip.classList.remove('show'); updateSend();
+});
+
+function updateSend() {
+  sendBtn.disabled = isLoading || (!selectedFile && !chatInput.value.trim());
+}
+
+// Chips
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chatInput.value = chip.dataset.fill;
+    chatInput.dispatchEvent(new Event('input'));
+    chatInput.focus();
+  });
+});
+
+// Reset
+function resetChat() {
+  messagesList.innerHTML = ''; messagesList.style.display = 'none';
+  emptyState.style.display = '';
+  chatInput.value = ''; chatInput.style.height = 'auto';
+  removeImg.click(); updateSend();
+}
+clearBtn.addEventListener('click', resetChat);
+newChatBtn.addEventListener('click', resetChat);
+
+// Submit
+sendBtn.addEventListener('click', submit);
+
+async function submit() {
+  const text    = chatInput.value.trim();
+  const imgFile = selectedFile;
+  const imgSrc  = thumbImg.src;
+  if (!text && !imgFile) return;
+
+  emptyState.style.display = 'none';
+  messagesList.style.display = 'flex';
+  appendUserMsg(text, imgSrc, !!imgFile);
+
+  chatInput.value = ''; chatInput.style.height = 'auto';
+  removeImg.click(); isLoading = true; updateSend();
+
+  const typingId = appendTyping();
+  try {
+    const fd = new FormData();
+    if (imgFile) fd.append('image', imgFile);
+    if (text)    fd.append('symptoms', text);
+
+    const res  = await fetch(API_URL, { method:'POST', body:fd });
+    const data = await res.json();
+    removeMsg(typingId);
+
+    if (!res.ok || !data.success) throw new Error(data.error || `Error ${res.status}`);
+    appendAssistantResult(data);
+  } catch (err) {
+    removeMsg(typingId);
+    appendAssistantError(err.message);
+  }
+
+  isLoading = false; updateSend(); scrollBottom();
+}
+
+// Builders
+function appendUserMsg(text, imgSrc, hasImg) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `
+    <div class="msg-avatar user">You</div>
+    <div class="msg-body">
+      <div class="msg-name"><span class="name-tag">You</span></div>
+      ${hasImg ? `<div class="msg-image"><img src="${imgSrc}" alt="symptom"></div>` : ''}
+      ${text ? `<div class="msg-text">${esc(text)}</div>` : ''}
+    </div>`;
+  messagesList.appendChild(div);
+  scrollBottom();
+}
+
+function appendTyping() {
+  const id = 'ty-' + Date.now();
+  const div = document.createElement('div');
+  div.className = 'msg'; div.id = id;
+  div.innerHTML = `
+    <div class="msg-avatar assistant">⚕</div>
+    <div class="msg-body">
+      <div class="msg-name"><span class="name-tag">MedTriage</span></div>
+      <div class="typing-indicator">
+        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+      </div>
+    </div>`;
+  messagesList.appendChild(div); scrollBottom(); return id;
+}
+
+function appendAssistantResult(data) {
+  const a = data.assessment, meta = data.meta;
+  const level = (a.risk_level || 'low').toLowerCase();
+  const concerns = (a.potential_concerns || [])
+    .map(c => `<span class="concern-chip">${esc(c)}</span>`).join('');
+
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `
+    <div class="msg-avatar assistant">⚕</div>
+    <div class="msg-body">
+      <div class="msg-name"><span class="name-tag">MedTriage</span></div>
+      <div class="msg-text" style="margin-bottom:12px">${esc(a.general_observations || 'Assessment complete.')}</div>
+      <div class="triage-card">
+        <div class="tc-header">
+          <span class="tc-title">Triage Report</span>
+          <div class="risk-pill risk-${level}">
+            <span class="rp-score">${a.risk_score ?? '–'}</span>
+            <span>/10 · ${esc(a.risk_level || '–')}</span>
+          </div>
+        </div>
+        <div class="tc-body">
+          ${concerns ? `<div class="tc-row"><div class="tc-label">Potential Concerns</div><div class="concerns-chips">${concerns}</div></div>` : ''}
+          <div class="tc-row">
+            <div class="tc-label">Recommendation</div>
+            <div class="rec-row">
+              <div class="rec-emoji">${a.seek_emergency_care ? '🚨' : '💊'}</div>
+              <div>
+                <div class="rec-main">${esc(a.recommendation || '—')}</div>
+                ${a.follow_up_timeframe ? `<div class="rec-follow">Follow-up · ${esc(a.follow_up_timeframe)}</div>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tc-footer">
+          <div class="tc-meta"><span>${esc(meta.model||'')}</span><span>${meta.processing_time_ms||0}ms</span></div>
+          <div class="tc-disclaimer">${esc(a.disclaimer||'')}</div>
+        </div>
+      </div>
+    </div>`;
+  messagesList.appendChild(div); scrollBottom();
+}
+
+function appendAssistantError(msg) {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `
+    <div class="msg-avatar assistant">⚕</div>
+    <div class="msg-body">
+      <div class="msg-name"><span class="name-tag">MedTriage</span></div>
+      <div class="msg-text" style="color:var(--red)">⚠ ${esc(msg)}</div>
+    </div>`;
+  messagesList.appendChild(div);
+}
+
+function removeMsg(id) { const el = document.getElementById(id); if (el) el.remove(); }
+function scrollBottom() { chatArea.scrollTo({ top: chatArea.scrollHeight, behavior:'smooth' }); }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

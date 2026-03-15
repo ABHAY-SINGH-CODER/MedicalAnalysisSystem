@@ -37,7 +37,7 @@ Be conservative: when uncertain, escalate the risk level.
 also describe your reasoning in the "general_observations" field based on the inputs you received.
 `.trim();
 }
-
+app.use(express.static(__dirname)); // serves index.html
 // ── POST /api/triage ───────────────────────────────────────────────────────────
 // Accepts: multipart/form-data with optional `image` file and optional `symptoms` text
 app.post("/api/triage", upload.single("image"), async (req, res) => {
