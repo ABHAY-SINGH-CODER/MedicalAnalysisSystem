@@ -10,7 +10,7 @@ const upload = multer({ dest: "uploads/", limits: { fileSize: 10 * 1024 * 1024 }
 app.use(express.json());
 
 // ── Initialize Gemini ──────────────────────────────────────────────────────────
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY |"AIzaSyCkXPaBeEsVMMl-Vkp5fppidB5jgpf8Tog");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ── Helper: build structured prompt ───────────────────────────────────────────
 function buildPrompt(symptoms) {
