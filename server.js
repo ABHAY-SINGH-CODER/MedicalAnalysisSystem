@@ -35,6 +35,8 @@ Analyze the provided information and respond ONLY with a valid JSON object (no m
 
 Be conservative: when uncertain, escalate the risk level.
 also describe your reasoning in the "general_observations" field based on the inputs you received.
+
+Give the description of image in large paragraph as a doctor and potential diagonoses based on the image and symptoms in the "general_observations" field. Be detailed and thorough in your analysis.
 `.trim();
 }
 app.use(express.static(__dirname)); // serves index.html
