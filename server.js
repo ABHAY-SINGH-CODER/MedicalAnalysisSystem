@@ -1,13 +1,9 @@
 const express = require("express");
-const multer = require("multer");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const fs = require("fs");
-const path = require("path");
 
 const app = express();
-const upload = multer({ dest: "uploads/", limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit
-
-app.use(express.json());
+app.use(express.json({ limit: "20mb" })); // Allow large base64 payloads
+app.use(express.static(__dirname));
 
 // ── Initialize Gemini ──────────────────────────────────────────────────────────
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -34,24 +30,45 @@ Analyze the provided information and respond ONLY with a valid JSON object (no m
 }
 
 Be conservative: when uncertain, escalate the risk level.
-also describe your reasoning in the "general_observations" field based on the inputs you received.
+Also describe your reasoning in the "general_observations" field based on the inputs you received.
 
-Give the description of image in large paragraph as a doctor and potential diagonoses based on the image and symptoms in the "general_observations" field. Be detailed and thorough in your analysis.
+Give the description of image in large paragraph as a doctor and potential diagnoses based on the image and symptoms in the "general_observations" field. Be detailed and thorough in your analysis.
 `.trim();
 }
-app.use(express.static(__dirname)); // serves index.html
-// ── POST /api/triage ───────────────────────────────────────────────────────────
-// Accepts: multipart/form-data with optional `image` file and optional `symptoms` text
-app.post("/api/triage", upload.single("image"), async (req, res) => {
-  const startTime = Date.now();
-  const symptoms = req.body.symptoms?.trim() || null;
-  const imageFile = req.file || null;
 
-  // Require at least one input
-  if (!symptoms && !imageFile) {
+// ── Helper: validate and clean base64 string ───────────────────────────────────
+function parseBase64Image(raw) {
+  if (!raw || typeof raw !== "string") return null;
+
+  // Strip data URI prefix if present: "data:image/png;base64,<data>"
+  const match = raw.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+  if (match) {
+    return { mimeType: match[1], data: match[2] };
+  }
+
+  // Plain base64 string (no prefix) — default to jpeg
+  return { mimeType: "image/jpeg", data: raw };
+}
+
+// ── POST /api/triage ───────────────────────────────────────────────────────────
+// Accepts: JSON body with optional base64 image and optional symptoms text
+// Body: { symptoms?: string, image_base64?: string, image_mime_type?: string }
+app.post("/api/triage", async (req, res) => {
+  const startTime = Date.now();
+  const { symptoms: rawSymptoms, image_base64, image_mime_type } = req.body;
+
+  const symptoms = rawSymptoms?.trim() || null;
+  const parsedImage = parseBase64Image(image_base64);
+
+  // Override mime type if explicitly provided
+  if (parsedImage && image_mime_type) {
+    parsedImage.mimeType = image_mime_type;
+  }
+
+  if (!symptoms && !parsedImage) {
     return res.status(400).json({
       success: false,
-      error: "Provide at least one of: `symptoms` (text) or `image` (file).",
+      error: "Provide at least one of: `symptoms` (text) or `image_base64` (base64 string).",
     });
   }
 
@@ -59,32 +76,31 @@ app.post("/api/triage", upload.single("image"), async (req, res) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const parts = [];
 
-    // Add image part if provided
-    if (imageFile) {
-      const imageData = fs.readFileSync(imageFile.path).toString("base64");
+    if (parsedImage) {
       parts.push({
         inlineData: {
-          data: imageData,
-          mimeType: imageFile.mimetype || "image/jpeg",
+          data: parsedImage.data,
+          mimeType: parsedImage.mimeType,
         },
       });
-      fs.unlinkSync(imageFile.path); // Clean up temp file
     }
 
-    // Add prompt
     parts.push({ text: buildPrompt(symptoms) });
 
     const result = await model.generateContent(parts);
     const rawText = result.response.text().trim();
 
     // Strip markdown fences if present
-    const jsonText = rawText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+    const jsonText = rawText
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
 
     let assessment;
     try {
       assessment = JSON.parse(jsonText);
     } catch {
-      // If JSON parse fails, return raw as fallback
       return res.status(502).json({
         success: false,
         error: "Model returned non-JSON response.",
@@ -98,7 +114,7 @@ app.post("/api/triage", upload.single("image"), async (req, res) => {
         model: "gemini-2.5-flash",
         inputs_provided: {
           symptoms: !!symptoms,
-          image: !!imageFile,
+          image: !!parsedImage,
         },
         processing_time_ms: Date.now() - startTime,
         timestamp: new Date().toISOString(),
@@ -106,11 +122,6 @@ app.post("/api/triage", upload.single("image"), async (req, res) => {
       assessment,
     });
   } catch (err) {
-    // Clean up temp file on error
-    if (imageFile?.path && fs.existsSync(imageFile.path)) {
-      fs.unlinkSync(imageFile.path);
-    }
-
     const status = err.status || err.statusCode || 500;
     return res.status(status).json({
       success: false,
@@ -119,77 +130,15 @@ app.post("/api/triage", upload.single("image"), async (req, res) => {
   }
 });
 
-// ── POST /api/triage/json ──────────────────────────────────────────────────────
-// Alternative: accepts JSON body with base64 image
-app.post("/api/triage/json", async (req, res) => {
-  const startTime = Date.now();
-  const { symptoms, image_base64, image_mime_type } = req.body;
-
-  if (!symptoms && !image_base64) {
-    return res.status(400).json({
-      success: false,
-      error: "Provide at least one of: `symptoms` (string) or `image_base64` (base64 string).",
-    });
-  }
-
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const parts = [];
-
-    if (image_base64) {
-      parts.push({
-        inlineData: {
-          data: image_base64,
-          mimeType: image_mime_type || "image/jpeg",
-        },
-      });
-    }
-
-    parts.push({ text: buildPrompt(symptoms) });
-
-    const result = await model.generateContent(parts);
-    const rawText = result.response.text().trim();
-    const jsonText = rawText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-
-    let assessment;
-    try {
-      assessment = JSON.parse(jsonText);
-    } catch {
-      return res.status(502).json({
-        success: false,
-        error: "Model returned non-JSON response.",
-        raw_response: rawText,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      meta: {
-        model: "gemini-2.5-flash",
-        inputs_provided: { symptoms: !!symptoms, image: !!image_base64 },
-        processing_time_ms: Date.now() - startTime,
-        timestamp: new Date().toISOString(),
-      },
-      assessment,
-    });
-  } catch (err) {
-    return res.status(err.status || 500).json({
-      success: false,
-      error: err.message || "Internal server error.",
-    });
-  }
-});
-
 // ── GET /api/health ────────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "medical-triage-api", version: "1.0.0" });
+  res.json({ status: "ok", service: "medical-triage-api", version: "2.0.0" });
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Triage API running on http://localhost:${PORT}`);
-  console.log(`   POST /api/triage        → multipart/form-data (image file + symptoms text)`);
-  console.log(`   POST /api/triage/json   → application/json    (base64 image + symptoms text)`);
-  console.log(`   GET  /api/health        → health check`);
+  console.log(`   POST /api/triage   → application/json (base64 image + symptoms text)`);
+  console.log(`   GET  /api/health   → health check`);
 });
